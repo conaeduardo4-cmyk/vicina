@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="it">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nuova password – Vicina</title>
+<style>
+  body{font:16px -apple-system,system-ui,sans-serif;background:#f2f2f7;margin:0;display:grid;place-items:center;min-height:100vh}
+  main{background:#fff;border-radius:16px;padding:28px;max-width:360px;width:calc(100% - 40px)}
+  h1{margin:0 0 8px;font-size:22px} p{color:#555}
+  input,button{width:100%;box-sizing:border-box;padding:14px;border-radius:12px;font-size:16px;margin-top:12px;border:1px solid #ccc}
+  button{background:#ff3b30;color:#fff;border:0;font-weight:600}
+</style>
+<main>
+  <h1>Nuova password</h1>
+  <p id="m">Verifica del link…</p>
+  <form id="f" hidden>
+    <input id="p" type="password" minlength="6" placeholder="Nuova password" autocomplete="new-password" required>
+    <button>Salva</button>
+  </form>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+  // Compila questi due valori (Supabase → Project Settings → API)
+  const SUPABASE_URL = 'https://XXXX.supabase.co', SUPABASE_ANON_KEY = 'LA_TUA_ANON_KEY';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const m = document.getElementById('m'), f = document.getElementById('f'), p = document.getElementById('p');
+  sb.auth.onAuthStateChange(ev => { if (ev === 'PASSWORD_RECOVERY') { m.textContent = 'Scegli la nuova password.'; f.hidden = false; } });
+  f.onsubmit = async e => {
+    e.preventDefault();
+    const { error } = await sb.auth.updateUser({ password: p.value });
+    m.textContent = error ? 'Non è stato possibile salvarla: ' + error.message : 'Password aggiornata. Ora puoi tornare all\'app.';
+    if (!error) f.hidden = true;
+  };
+  setTimeout(() => { if (f.hidden && m.textContent.startsWith('Verifica')) m.textContent = 'Link non valido o scaduto. Richiedine uno nuovo dall\'app.'; }, 4000);
+</script>
+</html>

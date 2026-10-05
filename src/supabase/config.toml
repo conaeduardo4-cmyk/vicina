@@ -1,0 +1,5 @@
+project_id = "vicina"
+
+# cleanup-sos viene chiamata da GitHub Actions con un secret condiviso, non con il token di un utente
+[functions.cleanup-sos]
+verify_jwt = false
