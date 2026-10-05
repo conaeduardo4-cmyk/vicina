@@ -1,0 +1,16 @@
+name: Manutenzione giornaliera
+# Cancella le foto SOS dopo 7 giorni e tiene attivo il progetto Supabase gratuito
+# (che altrimenti va in pausa dopo circa una settimana senza traffico).
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chiama cleanup-sos
+        run: |
+          curl -fsS -X POST "${{ secrets.VITE_SUPABASE_URL }}/functions/v1/cleanup-sos" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}"
