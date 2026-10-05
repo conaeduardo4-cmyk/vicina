@@ -1,0 +1,52 @@
+name: Build iOS IPA (non firmato)
+on:
+  workflow_dispatch:
+
+jobs:
+  ipa:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+
+      - run: npm install
+
+      - name: Configurazione (.env)
+        run: |
+          {
+            echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}"
+            echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}"
+            echo "VITE_RESET_URL=${{ secrets.VITE_RESET_URL }}"
+          } > .env
+
+      - run: npm run build
+      - run: npx cap add ios
+      - run: npm run native
+
+      - name: GoogleService-Info.plist (serve per le notifiche push)
+        env: { GSP: "${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}" }
+        run: |
+          if [ -n "$GSP" ]; then echo "$GSP" | base64 -d > ios/App/App/GoogleService-Info.plist
+          else echo "::warning::GOOGLE_SERVICE_INFO_PLIST_B64 mancante: niente notifiche push"; fi
+
+      - run: npx cap sync ios
+
+      - name: Compila senza firma
+        working-directory: ios/App
+        run: |
+          if [ -d App.xcworkspace ]; then TARGET="-workspace App.xcworkspace"; else TARGET="-project App.xcodeproj"; fi
+          xcodebuild $TARGET -scheme App -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+
+      - name: Crea l'.ipa
+        run: |
+          mkdir Payload
+          cp -R ios/App/build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -qr Vicina-unsigned.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vicina-ios-ipa-non-firmato
+          path: Vicina-unsigned.ipa
